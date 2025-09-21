@@ -1,0 +1,338 @@
+# ODR-PadEnc Optimized Dockerfile with StreamDAB Enhancements
+# Zero Error/Warning Policy Enforced
+# Multi-stage build for production-ready container
+
+# Use optimized StreamDAB C++ base image
+FROM streamdab/cpp-base:latest AS builder
+
+# Set build arguments
+ARG BUILD_THREADS=4
+ARG BUILD_TYPE=Release
+ARG COMPONENT_NAME=ODR-PadEnc
+
+# MANDATORY: Enforce zero error/warning policy
+ENV COMPONENT_NAME=${COMPONENT_NAME}
+ENV BUILD_TYPE=${BUILD_TYPE}
+ENV CXXFLAGS="-Wall -Wextra -Werror -pedantic -std=c++17 -O3 -DNDEBUG -Wno-unused-parameter"
+ENV CFLAGS="-Wall -Wextra -Werror -pedantic -O3 -DNDEBUG"
+
+# Set work directory
+WORKDIR /app
+
+# Copy source code
+COPY . .
+
+# Install component-specific dependencies (PAD and MOT specific)
+RUN apt-get update && apt-get install -y \
+    # Image processing libraries for MOT slideshow
+    libmagick++-dev \
+    libmagickwand-dev \
+    libmagickcore-dev \
+    libimagemagick-perl \
+    libjpeg-dev \
+    libpng-dev \
+    libgif-dev \
+    libtiff-dev \
+    libwebp-dev \
+    # Font libraries for Thai text rendering
+    libfreetype6-dev \
+    libfontconfig1-dev \
+    libcairo2-dev \
+    libpango1.0-dev \
+    # Text processing libraries
+    libfribidi-dev \
+    libharfbuzz-dev \
+    # Thai language rendering
+    libthai-dev \
+    libdatrie-dev \
+    # XML processing for MOT
+    libxml2-dev \
+    libxslt1-dev \
+    libtinyxml2-dev \
+    # Cleanup
+    && rm -rf /var/lib/apt/lists/*
+
+# Configure build with all features enabled and strict settings
+RUN mkdir -p build && cd build && \
+    cmake .. \
+    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+    -DCMAKE_INSTALL_PREFIX=/usr/local \
+    -DCMAKE_CXX_STANDARD=17 \
+    -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+    -DCMAKE_CXX_EXTENSIONS=OFF \
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS}" \
+    -DCMAKE_C_FLAGS="${CFLAGS}" \
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+    -DBUILD_TESTS=ON \
+    -DENABLE_COVERAGE=ON \
+    -DENABLE_OPTIMIZATION=ON \
+    -DENABLE_THAI_RENDERING=ON \
+    -DENABLE_CULTURAL_FEATURES=ON \
+    -DENABLE_STREAMDAB_API=ON \
+    -DWITH_IMAGEMAGICK=ON \
+    -DWITH_CAIRO=ON \
+    -DWITH_PANGO=ON \
+    -DWITH_THAI_SUPPORT=ON \
+    -G Ninja
+
+# Build with zero error/warning enforcement
+RUN cd build && \
+    echo "=== Building ${COMPONENT_NAME} with zero error/warning policy ===" && \
+    ninja -j${BUILD_THREADS} && \
+    echo "=== Running comprehensive tests ===" && \
+    ctest --output-on-failure --parallel ${BUILD_THREADS} && \
+    echo "=== Installing built components ===" && \
+    ninja install
+
+# Validate binary works correctly
+RUN cd build && \
+    echo "=== Validating binary functionality ===" && \
+    ./odr-padenc --version && \
+    ./odr-padenc --help
+
+# Generate coverage report for validation
+RUN cd build && \
+    echo "=== Generating coverage report ===" && \
+    ninja coverage && \
+    echo "Coverage report generated in build/coverage_report/"
+
+# Production runtime image
+FROM ubuntu:22.04 AS runtime
+
+# Set runtime environment
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Asia/Bangkok
+ENV LANG=th_TH.UTF-8
+ENV LANGUAGE=th_TH:th:en
+ENV LC_ALL=th_TH.UTF-8
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y \
+    # Image processing runtime libraries
+    libmagick++-6.q16-8 \
+    libmagickwand-6.q16-6 \
+    libmagickcore-6.q16-6 \
+    libjpeg8 \
+    libpng16-16 \
+    libgif7 \
+    libtiff5 \
+    libwebp7 \
+    # Font rendering runtime
+    libfreetype6 \
+    libfontconfig1 \
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    # Text processing runtime
+    libfribidi0 \
+    libharfbuzz0b \
+    # Thai language runtime
+    libthai0 \
+    libdatrie1 \
+    # XML processing runtime
+    libxml2 \
+    libxslt1.1 \
+    libtinyxml2-9 \
+    # Core runtime libraries
+    libzmq5 \
+    libcurl4 \
+    libssl3 \
+    # System utilities
+    ca-certificates \
+    tzdata \
+    locales \
+    netcat-openbsd \
+    curl \
+    wget \
+    # Thai fonts and language support
+    fonts-thai-tlwg \
+    fonts-tlwg-purisa \
+    fonts-tlwg-sawasdee \
+    fonts-tlwg-laksaman \
+    fonts-noto-cjk \
+    language-pack-th \
+    # Image utilities
+    imagemagick \
+    # Debugging tools (minimal)
+    gdb \
+    strace \
+    # Cleanup
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Configure locales and timezone
+RUN locale-gen th_TH.UTF-8 en_US.UTF-8 && \
+    update-locale LANG=th_TH.UTF-8 LC_ALL=th_TH.UTF-8 && \
+    ln -snf /usr/share/zoneinfo/Asia/Bangkok /etc/localtime && \
+    echo "Asia/Bangkok" > /etc/timezone
+
+# Create non-root user for security
+RUN groupadd -r streamdab && \
+    useradd -r -g streamdab -m -d /opt/streamdab -s /bin/bash \
+    -c "StreamDAB PAD Encoder" streamdab
+
+# Copy built application from builder stage
+COPY --from=builder /usr/local/bin/odr-padenc /usr/local/bin/
+COPY --from=builder /usr/local/share/man/man1/odr-padenc.1 /usr/local/share/man/man1/
+
+# Create application directories with proper permissions
+RUN mkdir -p /opt/streamdab/{config,logs,data,tmp,slideshows,templates} && \
+    chown -R streamdab:streamdab /opt/streamdab && \
+    chmod 755 /opt/streamdab
+
+# Copy configuration templates and Thai templates
+COPY --chown=streamdab:streamdab docker/config/* /opt/streamdab/config/
+COPY --chown=streamdab:streamdab templates/thai/ /opt/streamdab/templates/
+COPY --chown=streamdab:streamdab templates/cultural/ /opt/streamdab/templates/
+
+# Set up logging directory with proper permissions
+RUN mkdir -p /var/log/odr-padenc && \
+    chown streamdab:streamdab /var/log/odr-padenc && \
+    chmod 755 /var/log/odr-padenc
+
+# Copy and configure scripts
+COPY --chown=streamdab:streamdab docker/healthcheck.sh /opt/streamdab/
+COPY --chown=streamdab:streamdab docker/entrypoint.sh /opt/streamdab/
+RUN chmod +x /opt/streamdab/healthcheck.sh /opt/streamdab/entrypoint.sh
+
+# Configure ImageMagick for security (allow PDF, SVG processing)
+RUN sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/' /etc/ImageMagick-6/policy.xml && \
+    sed -i 's/rights="none" pattern="SVG"/rights="read|write" pattern="SVG"/' /etc/ImageMagick-6/policy.xml
+
+# Update library cache
+RUN ldconfig
+
+# Security hardening
+RUN chmod 700 /opt/streamdab/config && \
+    chmod 750 /opt/streamdab/logs && \
+    chmod 755 /opt/streamdab/slideshows /opt/streamdab/templates
+
+# Switch to non-root user
+USER streamdab
+WORKDIR /opt/streamdab
+
+# Enhanced health check with comprehensive validation
+HEALTHCHECK --interval=30s --timeout=15s --start-period=30s --retries=3 \
+    CMD /opt/streamdab/healthcheck.sh
+
+# Expose StreamDAB API port (from allocation plan)
+EXPOSE 8008
+
+# Volumes for persistent data
+VOLUME ["/opt/streamdab/logs", "/opt/streamdab/data", "/opt/streamdab/slideshows", "/var/log/odr-padenc"]
+
+# Default environment variables
+ENV API_PORT=8008
+ENV LOG_LEVEL=INFO
+ENV ENVIRONMENT=production
+ENV THAI_RENDERING_ENABLED=true
+ENV CULTURAL_FEATURES_ENABLED=true
+ENV STREAMDAB_API_ENABLED=true
+ENV SLIDESHOW_QUALITY=high
+ENV THAI_FONT_PATH="/usr/share/fonts/truetype/tlwg"
+ENV ZERO_ERROR_WARNING_ENFORCED=true
+
+# Default command
+ENTRYPOINT ["/opt/streamdab/entrypoint.sh"]
+CMD ["--help"]
+
+# Enhanced metadata labels
+LABEL org.opencontainers.image.title="ODR-PadEnc StreamDAB Enhanced"
+LABEL org.opencontainers.image.description="DAB+ PAD encoder with StreamDAB enhancements for Thailand broadcasting - Zero Error/Warning Build"
+LABEL org.opencontainers.image.version="4.3.0"
+LABEL org.opencontainers.image.authors="StreamDAB Development Team"
+LABEL org.opencontainers.image.vendor="StreamDAB Project"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL org.opencontainers.image.documentation="https://docs.streamdab.org/odr-padenc"
+LABEL org.opencontainers.image.source="https://github.com/streamdab/ODR-PadEnc"
+LABEL build.compiler.flags="-Wall -Wextra -Werror -pedantic -std=c++17"
+LABEL build.policy="zero-errors-zero-warnings"
+LABEL build.optimized="true"
+LABEL component.type="DAB-PAD-MOT-Encoder"
+LABEL thailand.features="thai-text-rendering-cultural-slideshows"
+LABEL image.processing="ImageMagick-Cairo-Pango"
+LABEL text.rendering="Thai-fonts-Buddhist-calendar"
+LABEL mot.features="slideshow-DLS-thai-metadata"
+
+# Development stage (optional, for debugging and testing)
+FROM builder AS development
+
+# Install additional development tools
+RUN apt-get update && apt-get install -y \
+    vim \
+    nano \
+    htop \
+    iotop \
+    tmux \
+    screen \
+    bash-completion \
+    tree \
+    file \
+    less \
+    # Image development tools
+    gimp \
+    inkscape \
+    # Font tools
+    fontforge \
+    # Analysis tools
+    valgrind \
+    clang-format \
+    clang-tidy \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up development environment
+WORKDIR /workspace
+COPY --from=builder /app/build ./build
+
+# Copy coverage reports for analysis
+RUN mkdir -p /workspace/reports && \
+    cp -r /app/build/coverage_report/* /workspace/reports/ 2>/dev/null || true
+
+# Copy sample Thai content for development
+COPY examples/thai-slideshows/ /workspace/examples/
+COPY examples/thai-templates/ /workspace/templates/
+
+# Development user setup
+RUN useradd -m -s /bin/bash -G sudo developer && \
+    echo "developer:developer" | chpasswd
+
+USER developer
+WORKDIR /workspace
+
+# Default development command
+CMD ["/bin/bash"]
+
+# Testing stage (for CI/CD)
+FROM builder AS testing
+
+# Run comprehensive tests
+RUN cd build && \
+    echo "=== Running unit tests ===" && \
+    ctest -L unit --verbose && \
+    echo "=== Running integration tests ===" && \
+    ctest -L integration --verbose && \
+    echo "=== Running Thai rendering tests ===" && \
+    ctest -L thai --verbose && \
+    echo "=== Running performance tests ===" && \
+    ctest -L performance --verbose
+
+# Run security analysis
+RUN cd build && \
+    echo "=== Running Valgrind memory check ===" && \
+    valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all \
+    --track-origins=yes --verbose --log-file=valgrind.log \
+    ./test_thai_rendering || true && \
+    echo "Valgrind analysis completed"
+
+# Generate test reports
+RUN cd build && \
+    echo "=== Generating test reports ===" && \
+    ctest --output-on-failure --output-junit test_results.xml || true
+
+# Coverage analysis
+RUN cd build && \
+    echo "=== Coverage analysis results ===" && \
+    lcov --summary coverage_filtered.info
+
+# Final test validation
+RUN echo "=== All tests completed successfully ==="

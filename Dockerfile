@@ -29,7 +29,7 @@ RUN apt-get update && apt-get install -y \
     google-mock \
     libgtest-dev \
     lcov \
-    gcov \
+    gcc \
     valgrind \
     && rm -rf /var/lib/apt/lists/*
 

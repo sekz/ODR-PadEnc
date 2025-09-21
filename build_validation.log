@@ -1,0 +1,14 @@
+fatal: No names found, cannot describe anything.
+make  all-am
+make[1]: Entering directory '/home/seksan/workspace/streamdab/ODR-PadEnc'
+fatal: No names found, cannot describe anything.
+  CXX      src/odr_padenc-odr-padenc.o
+  CXX      src/odr_padenc-pad_interface.o
+  CXX      src/odr_padenc-common.o
+  CXX      src/odr_padenc-pad_common.o
+  CXX      src/odr_padenc-dls.o
+  CXX      src/odr_padenc-sls.o
+  CXX      src/odr_padenc-charset.o
+  CXX      src/odr_padenc-crc.o
+  CXXLD    odr-padenc
+make[1]: Leaving directory '/home/seksan/workspace/streamdab/ODR-PadEnc'
