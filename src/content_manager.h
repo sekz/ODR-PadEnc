@@ -217,7 +217,7 @@ private:
     void ProcessThaiContent(std::shared_ptr<ContentItem> item);
     
 public:
-    explicit ContentCoordinator(const CoordinatorConfig& config = CoordinatorConfig{});
+    explicit ContentCoordinator(const CoordinatorConfig& config = CoordinatorConfig());
     ~ContentCoordinator();
     
     // Coordinator control

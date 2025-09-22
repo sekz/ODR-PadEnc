@@ -23,6 +23,7 @@
 #include <map>
 #include <memory>
 #include <atomic>
+#include <variant>
 #include <thread>
 #include <mutex>
 #include <functional>

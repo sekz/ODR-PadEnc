@@ -81,7 +81,7 @@ private:
     CarouselConfig config_;
     std::vector<std::unique_ptr<EnhancedImageData>> image_cache_;
     std::unordered_map<std::string, size_t> hash_index_;
-    std::mutex cache_mutex_;
+    mutable std::mutex cache_mutex_;
     std::atomic<bool> processing_active_{false};
     std::thread background_processor_;
     
@@ -90,9 +90,11 @@ private:
     std::string CalculateImageHash(const std::vector<uint8_t>& data);
     ImageQuality AnalyzeImageQuality(const std::vector<uint8_t>& image_data);
     bool OptimizeImage(const std::string& input_path, std::vector<uint8_t>& output_data, ImageFormat target_format);
+#ifdef HAVE_IMAGEMAGICK
     bool ConvertToWebP(const Magick::Image& image, std::vector<uint8_t>& output_data, int quality = 80);
     bool ConvertToHEIF(const Magick::Image& image, std::vector<uint8_t>& output_data, int quality = 80);
     bool ConvertToProgressiveJPEG(const Magick::Image& image, std::vector<uint8_t>& output_data, int quality = 85);
+#endif
     
     // Smart selection algorithms
     double CalculateFreshnessScore(const EnhancedImageData& image_data);
@@ -146,9 +148,11 @@ public:
                               std::vector<uint8_t>& output_data,
                               size_t max_size = SLSEncoder::MAXSLIDESIZE_SIMPLE);
     
+#ifdef HAVE_IMAGEMAGICK
     static bool ResizeImage(Magick::Image& image, uint32_t max_width, uint32_t max_height);
     
     static bool ApplyDABProfile(Magick::Image& image);
+#endif
     
     static double CalculateCompressionRatio(size_t original_size, size_t compressed_size);
 };
