@@ -26,22 +26,13 @@ RUN apt-get update && apt-get install -y \
     libheif-dev \
     libicu-dev \
     libutfcpp-dev \
-    google-mock \
-    libgtest-dev \
     lcov \
     gcc \
     valgrind \
     && rm -rf /var/lib/apt/lists/*
 
-# Build and install Google Test
-RUN cd /usr/src/gtest && \
-    cmake . && \
-    make && \
-    cp lib/*.a /usr/lib/ && \
-    cd /usr/src/gmock && \
-    cmake . && \
-    make && \
-    cp lib/*.a /usr/lib/
+# Note: Google Test will be downloaded by CMake FetchContent during build
+# This eliminates the problematic manual Google Test/GMock build
 
 # Create application directory
 WORKDIR /app
@@ -51,7 +42,6 @@ COPY src/ ./src/
 COPY tests/ ./tests/
 COPY test-data/ ./test-data/
 COPY CMakeLists.txt ./
-COPY README.md ./
 
 # Build the application
 RUN mkdir -p build && cd build && \

@@ -128,7 +128,7 @@ private:
                        MessageComparator> priority_queue_;
     
     std::map<std::string, std::shared_ptr<DLSMessage>> message_index_;
-    std::mutex queue_mutex_;
+    mutable std::mutex queue_mutex_;
     std::atomic<size_t> total_messages_{0};
     std::atomic<size_t> expired_messages_{0};
     

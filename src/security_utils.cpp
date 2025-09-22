@@ -47,7 +47,7 @@ bool SecurePathValidator::ContainsTraversal(const std::string& path) const {
     // Check for encoded traversal
     if (path.find("%2e%2e") != std::string::npos) return true;  // ..
     if (path.find("%2f") != std::string::npos) return true;     // /
-    if (path.find("%5c") != std::string::npos) return true;     // \
+    if (path.find("%5c") != std::string::npos) return true;     // backslash
     
     return false;
 }

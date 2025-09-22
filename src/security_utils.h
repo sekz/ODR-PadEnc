@@ -20,6 +20,12 @@
 #include <atomic>
 #include <thread>
 #include <functional>
+#include <map>
+#include <queue>
+#include <condition_variable>
+#include <future>
+#include <cstring>
+#include <iostream>
 
 namespace StreamDAB {
 
@@ -170,7 +176,7 @@ private:
     };
     
     std::map<void*, AllocationInfo> allocations_;
-    std::mutex allocations_mutex_;
+    mutable std::mutex allocations_mutex_;
     std::atomic<size_t> total_allocated_{0};
     std::atomic<size_t> peak_allocated_{0};
     std::atomic<size_t> allocation_count_{0};

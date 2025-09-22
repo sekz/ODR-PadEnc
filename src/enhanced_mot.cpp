@@ -9,6 +9,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <cmath>
 #ifdef HAVE_IMAGEMAGICK
 #include <Magick++.h>
 #endif
@@ -124,6 +125,7 @@ ImageQuality EnhancedMOTProcessor::AnalyzeImageQuality(const std::vector<uint8_t
     return quality;
 }
 
+#ifdef HAVE_IMAGEMAGICK
 bool EnhancedMOTProcessor::ConvertToWebP(const Magick::Image& image, 
                                          std::vector<uint8_t>& output_data, 
                                          int quality) {

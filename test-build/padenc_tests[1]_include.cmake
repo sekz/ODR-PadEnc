@@ -1,0 +1,5 @@
+if(EXISTS "/home/seksan/workspace/streamdab/ODR-PadEnc/test-build/padenc_tests[1]_tests.cmake")
+  include("/home/seksan/workspace/streamdab/ODR-PadEnc/test-build/padenc_tests[1]_tests.cmake")
+else()
+  add_test(padenc_tests_NOT_BUILT padenc_tests_NOT_BUILT)
+endif()
