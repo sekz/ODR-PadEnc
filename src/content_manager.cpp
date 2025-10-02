@@ -282,6 +282,9 @@ ContentCoordinator::ContentCoordinator(const CoordinatorConfig& config) : config
     APIConfig api_config;
     api_config.port = 8008; // StreamDAB allocated port
     api_service_ = std::make_unique<StreamDABAPIService>(api_config);
+}
+
+ContentCoordinator::ContentCoordinator() : ContentCoordinator(CoordinatorConfig{}) {
     
     std::cout << "Content Coordinator initialized" << std::endl;
 }
@@ -462,7 +465,7 @@ void ContentCoordinator::TriggerEmergencyBroadcast(const std::string& message,
     // Set emergency schedule
     emergency_item->schedule.start_time = std::chrono::system_clock::now();
     emergency_item->schedule.end_time = emergency_item->schedule.start_time + duration;
-    emergency_item->schedule.duration = duration;
+    emergency_item->schedule.duration = std::chrono::duration_cast<std::chrono::minutes>(duration);
     
     // Trigger emergency in scheduler
     scheduler_->TriggerEmergency(emergency_item, duration);
@@ -521,6 +524,9 @@ ContentValidator::ContentValidator(const ValidationRules& rules) : rules_(rules)
     thai_processor_ = std::make_unique<ThaiLanguageProcessor>();
     
     std::cout << "Content Validator initialized" << std::endl;
+}
+
+ContentValidator::ContentValidator() : ContentValidator(ValidationRules{}) {
 }
 
 ContentValidator::ValidationResult ContentValidator::ValidateContentItem(const ContentItem& item) {
