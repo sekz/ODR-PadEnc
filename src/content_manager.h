@@ -109,7 +109,7 @@ struct ContentItem {
 class ContentScheduler {
 private:
     std::vector<std::shared_ptr<ContentItem>> scheduled_content_;
-    std::mutex schedule_mutex_;
+    mutable std::mutex schedule_mutex_;
     std::atomic<bool> scheduler_running_{false};
     std::thread scheduler_thread_;
     
@@ -217,7 +217,8 @@ private:
     void ProcessThaiContent(std::shared_ptr<ContentItem> item);
     
 public:
-    explicit ContentCoordinator(const CoordinatorConfig& config = CoordinatorConfig());
+    explicit ContentCoordinator(const CoordinatorConfig& config);
+    ContentCoordinator(); // Default constructor
     ~ContentCoordinator();
     
     // Coordinator control
@@ -292,7 +293,8 @@ private:
     } rules_;
     
 public:
-    explicit ContentValidator(const ValidationRules& rules = ValidationRules{});
+    explicit ContentValidator(const ValidationRules& rules);
+    ContentValidator(); // Default constructor
     
     struct ValidationResult {
         bool is_valid = false;

@@ -9,6 +9,7 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+#include <random>
 #include <openssl/sha.h>
 #include <openssl/md5.h>
 #include <openssl/rand.h>
