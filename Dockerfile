@@ -63,9 +63,13 @@ RUN cd build && \
 # Copy entrypoint script AFTER build (fixes chmod order issue)
 COPY entrypoint.sh ./
 
+# Copy multi-instance entrypoint scripts (Phase 4.5b - ODR Multi-Instance)
+COPY entrypoint-multi.sh ./
+COPY entrypoint-multi-with-health.sh ./
+
 # Set up runtime environment
 RUN useradd -m -u 1000 streamdab && \
-    chmod +x /app/entrypoint.sh && \
+    chmod +x /app/entrypoint*.sh && \
     chown -R streamdab:streamdab /app
 
 USER streamdab
