@@ -10,6 +10,8 @@ PAD_DIR="${PAD_DIR:-/app/data/slides}"
 DLS_FILE="${DLS_FILE:-/app/data/dls.txt}"
 # Use FIFO for PAD output (to be consumed by ODR-DabMux)
 PAD_FIFO="${PAD_FIFO:-/tmp/pad.fifo}"
+# Use simple identifier for socket (ODR-PadEnc creates socket at /tmp/{identifier}.padenc)
+PAD_IDENT="${PAD_IDENT:-padfifo}"
 SLIDE_INTERVAL="${SLIDE_INTERVAL:-10}"
 CHARSET="${CHARSET:-15}"  # UTF-8 for Thai language support
 VERBOSE="${VERBOSE:-}"
@@ -56,9 +58,14 @@ cleanup() {
 
 trap cleanup INT TERM
 
+# Create directories for Unix sockets (prevents "No such file or directory" errors)
+# tmpfs mount ensures /tmp is writable by container user
+mkdir -p /tmp
+
 # Build command line arguments
-# Note: ODR-PadEnc auto-detects FIFO from path, no --output-type needed
-ARGS="--dir=$PAD_DIR --output=$PAD_FIFO --dls=$DLS_FILE --charset=$CHARSET --sleep=$SLIDE_INTERVAL"
+# Note: --output takes an identifier, not a full path. Socket created at /tmp/{identifier}.padenc
+# FIFO is separate and created by this script
+ARGS="--dir=$PAD_DIR --output=$PAD_IDENT --dls=$DLS_FILE --charset=$CHARSET --sleep=$SLIDE_INTERVAL"
 
 # Add verbose flag if requested
 if [ -n "$VERBOSE" ]; then
@@ -72,6 +79,7 @@ echo "========================================"
 echo "PAD Directory: $PAD_DIR"
 echo "DLS File: $DLS_FILE"
 echo "PAD FIFO: $PAD_FIFO"
+echo "PAD Socket Identifier: $PAD_IDENT (socket at /tmp/$PAD_IDENT.padenc)"
 echo "Slide Interval: ${SLIDE_INTERVAL}s"
 echo "Character Set: $CHARSET (UTF-8)"
 echo "FIFO Reader PID: $FIFO_READER_PID"
