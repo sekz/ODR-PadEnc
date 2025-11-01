@@ -67,10 +67,15 @@ COPY entrypoint.sh ./
 COPY entrypoint-multi.sh ./
 COPY entrypoint-multi-with-health.sh ./
 
-# Set up runtime environment
-RUN useradd -m -u 1000 streamdab && \
+# Set up runtime environment with proper user creation
+ARG BUILD_UID=1000
+ARG BUILD_GID=1000
+RUN groupadd -g ${BUILD_GID} streamdab && \
+    useradd -m -u ${BUILD_UID} -g streamdab -s /bin/bash -d /home/streamdab streamdab && \
+    mkdir -p /home/streamdab/logs /var/run /tmp && \
+    chmod 777 /var/run /tmp && \
     chmod +x /app/entrypoint*.sh && \
-    chown -R streamdab:streamdab /app
+    chown -R streamdab:streamdab /app /home/streamdab
 
 USER streamdab
 
