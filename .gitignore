@@ -34,3 +34,9 @@ odr-padenc
 /.cproject
 /.project
 /.settings/
+test-driver
+test-suite.log
+test_charset
+test_crc
+*.trs
+test_*.log

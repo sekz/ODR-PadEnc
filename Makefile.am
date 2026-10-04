@@ -30,6 +30,26 @@ odr_padenc_SOURCES  = \
 
 bin_PROGRAMS = odr-padenc$(EXEEXT)
 
+# Unit tests, run with "make check". They need no additional libraries.
+check_PROGRAMS = test_charset test_crc
+TESTS = $(check_PROGRAMS)
+
+test_charset_CXXFLAGS = -Wall -Wextra -I$(srcdir)/src
+test_charset_SOURCES = \
+					   tests/test_charset.cpp \
+					   tests/check.h \
+					   src/charset.cpp \
+					   src/charset.h
+
+test_crc_CXXFLAGS = -Wall -Wextra -I$(srcdir)/src
+test_crc_SOURCES = \
+					tests/test_crc.cpp \
+					tests/check.h \
+					src/crc.cpp \
+					src/crc.h \
+					src/common.cpp \
+					src/common.h
+
 
 EXTRA_DIST = \
     $(top_srcdir)/ChangeLog \
