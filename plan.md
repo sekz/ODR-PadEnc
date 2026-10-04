@@ -56,3 +56,27 @@ Each `next-<feature>` branch is cut from `next` and stacked in this order, becau
 ## Decision
 - [ ] The user reviews the results and chooses which groups go to mainstream.
 - [ ] Create one PR per chosen group against `Opendigitalradio/ODR-PadEnc` `next`.
+
+## Value assessment for mainstream (evidence from the code)
+
+Findings:
+- Mainstream builds with autotools and C++11. `Makefile.am` lists only the original 8 modules.
+- None of the new modules (`thai_rendering`, `security_utils`, `enhanced_mot`, `smart_dls`, `api_interface`, `content_manager`) is included from `odr-padenc.cpp` or built by autotools. Only the fork's CMake build compiles them, and it needs C++17, OpenSSL, WebP and HEIF.
+- `api_interface.cpp` and `content_manager.cpp` are stubs ("Implementation stub", "Placeholder for ETSI compliance validation"). The HTTP server is only described in comments.
+- Core code differs from `upstream/master` only by one `.gitignore` line, so there are no core bug fixes to submit.
+- Mainstream already ships MOT slideshow and DLS (README states DL Plus support).
+
+| Group | Verdict | Reason |
+|-------|---------|--------|
+| `next-core-fixes` | Drop | Nothing to submit; only `.gitignore` differs. |
+| `next-test-infra` | Hold | Mainstream has no tests. A small gtest suite for the existing `dls`, `charset` and `crc` code could be useful, but the current suite targets the fork's new modules. Rework before proposing. |
+| `next-thai` | Maybe, needs proof | Useful only if it changes the real `charset`/`dls` path. Verify the Thai handling against ETSI TS 101 756 before claiming compliance. Cultural features (Buddhist calendar, holidays) do not belong in an encoder. Split out any pure charset fix. |
+| `next-security` | Maybe, small part | Path-traversal checks for the slide folder and file inputs could be worth a small patch on the existing code. The large standalone library is not wired in and is too big to review. |
+| `next-enhanced-mot` | Maybe, small part | Idea of WebP/HEIF input is plausible, but mainstream already reads any ImageMagick format and re-encodes to JPEG/PNG. Not wired in. Only the duplicate-detection or quality ideas could be reworked as small patches on `sls.cpp`. |
+| `next-smart-dls` | Drop for mainstream | Priority queues, social media and RSS integration are application logic, not encoder logic. Not wired in. Keep in the fork. |
+| `next-api-content` | Drop for mainstream | StreamDAB-specific, stubs only, adds HTTP/WebSocket server scope. Keep in the fork. |
+| `next-docker-runtime` | Drop for mainstream | Fork deployment (health server, multi-instance entrypoints). Keep in the fork. |
+| `next-docs` | Partial | Mainstream README already updated upstream. Offer only generic fixes, if any. Fork-specific README and `TODO.md` stay in the fork. |
+| `DL Plus (TODO.md)` | Check first | Mainstream already advertises DL Plus. Verify what is missing before planning work. |
+
+Recommendation: submit nothing as-is. Candidate upstream patches, each small and on the autotools/C++11 build: (1) path/input validation hardening, (2) any real Thai charset fix proven against TS 101 756, (3) a minimal test harness for existing modules. Everything else stays in the fork.
