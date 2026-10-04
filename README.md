@@ -418,3 +418,24 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
 - **NBTC**: National Broadcasting and Telecommunications Commission of Thailand
 - **ImageMagick**: Image processing library
 - **Google Test**: Unit testing framework
+## Upstream usage notes
+
+### Basic example
+
+PAD length is specified in the audio encoder and must not be set on the `odr-padenc` command line.
+
+Example with DLS taken from *dls.txt* and a MOT Slideshow carousel from the *slides* folder. This assumes the identifier shared by the audio encoder and ODR-PadEnc is set in the *IDENTIFIER* environment variable.
+
+```sh
+odr-padenc -o $IDENTIFIER -t dls.txt -d ./slides
+```
+
+The `-o` parameter accepts either:
+- An identifier (e.g., `station1`): creates sockets at `/tmp/station1.padenc` and `/tmp/station1.audioenc`
+- A full path (e.g., `/var/run/radio/station1`): creates sockets at `/var/run/radio/station1.padenc` and `/var/run/radio/station1.audioenc`
+
+If you generate slides on the fly (e.g. album covers), set `--erase` so a slide is only transmitted once, and `--sleep=0` to start transmission as soon as the file is created.
+
+### Known limitations
+
+Some receivers cannot decode slides larger than some size, even within the limit given in the specification.

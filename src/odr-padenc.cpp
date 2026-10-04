@@ -58,9 +58,12 @@ static void usage(const char* name) {
     fprintf(stderr, " -d, --dir=DIRNAME         Directory to read images from.\n"
                     " -e, --erase               Erase slides from DIRNAME once they have\n"
                     "                             been encoded.\n"
-                    " -s, --sleep=DUR           Wait DUR seconds between each slide\n"
+                    " -s, --sleep=DUR           Wait DUR seconds between each slide. If set to 0, the next slide is inserted just after the previous one\n"
+                    "                             has been transmitted. This is useful e.g. for stations that transmit just a logo slide.\n"
                     "                             Default: %d\n"
-                    " -o, --output=IDENTIFIER   Socket to communicate with audio encoder\n"
+                    " -o, --output=IDENTIFIER   Socket to communicate with audio encoder.\n"
+                    "                             If IDENTIFIER contains '/', it's used as a full path.\n"
+                    "                             Otherwise, /tmp/ is prepended for backward compatibility\n"
                     " --dump-current-slide=F1   Write the slide currently being transmitted to the file F1\n"
                     " --dump-completed-slide=F2 Once the slide is transmitted, move the file from F1 to F2\n"
                     " -t, --dls=FILENAME        FIFO or file to read DLS text from.\n"
@@ -454,15 +457,22 @@ int PadEncoder::EncodeSlide() {
 }
 
 int PadEncoder::EncodeLabel() {
-    // skip insertion, if previous one not yet finished
+    // delay insertion, if previous one not yet finished
     if (pad_packetizer.QueueContainsDG(DLSEncoder::APPTYPE_START)) {
-        fprintf(stderr, "ODR-PadEnc Warning: skipping label insertion, as previous one still in transmission!\n");
+        if(!label_warn_shown) {
+            fprintf(stderr, "ODR-PadEnc Warning: there is a label already in transmission, delaying until the previous one ends.\n");
+            label_warn_shown = true;
+        }
+        return 0;
     }
     else {
+        if(label_warn_shown) {
+            fprintf(stderr, "ODR-PadEnc Previous label ended transmission, sending the new one.\n");
+            label_warn_shown = false;
+        }
         dls_encoder.encodeLabel(options.dls_files[curr_dls_file], options.item_state_file, options.dl_params);
+        return 1;
     }
-
-    return 0;
 }
 
 
@@ -533,12 +543,13 @@ int PadEncoder::Encode(PadInterface& intf) {
 
         if (pad_timeline >= next_label_insertion) {
             // encode label
-            result = EncodeLabel();
-            next_label_insertion += std::chrono::milliseconds(options.label_insertion);
+            int label_encode_result = 0;
+            label_encode_result = EncodeLabel();
+            if(label_encode_result > 0) {
+                next_label_insertion += std::chrono::milliseconds(options.label_insertion);
+            }
         }
     }
-    if (result)
-        return result;
 
     // flush one PAD (considering X-PAD output interval)
     auto pad = pad_packetizer.GetNextPAD(xpad_interval_counter == 0);
