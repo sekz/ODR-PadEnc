@@ -21,13 +21,29 @@ Fork: `sekz/ODR-PadEnc` (origin). Mainstream: `Opendigitalradio/ODR-PadEnc` (ups
 - `api_interface` and `content_manager` are stubs.
 - Verdict: keep all of them in the fork; extract only the ideas below as small patches.
 
-## Thai findings (ETSI TS 101 756)
-- The ETSI site is blocked from the build container, so the PDF could not be read directly. Findings come from upstream's own charset enum and help text (`pad_common.h`, `odr-padenc.cpp`), which follow the registry, and from running the code.
-- Fork claim "Thai character set identifier 0x0E" is not supported: upstream's registered IDs are 0, 1, 2, 3, 6 and 15. No Thai-specific table is used. The fork code invents ID 0x0E. Do not send that upstream.
-- Thai is valid on air only through ISO/IEC 10646 (UCS-2 BE, ID 6, or UTF-8, ID 15). Upstream already supports both via `-c 6`/`-c 15 -C`.
-- Real defect found: with default options (`-c 15`, no `-C`), upstream converts to Complete EBU Latin and silently replaces every non-Latin character with a space (`charset.cpp:104`). Test: `สวัสดี DAB` becomes 7 spaces plus `DAB`, with no warning.
-- The fork's Buddhist calendar, holiday and cultural-content features are not encoder functions and are not proposed.
-- To confirm before the PR: read TS 101 756 v2.5.1 charset table once the PDF is reachable (https://www.etsi.org/deliver/etsi_TS/101700_101799/101756/02.05.01_60/ts_101756v020501p.pdf).
+## Thai findings (ETSI TS 101 756 V2.5.1, 2025-06; PDF supplied by the user, checked 2026-10-04)
+Correction: the first version of this section was written without access to the standard and was partly wrong.
+
+Confirmed in the standard:
+- Table 1 (clause 5.2): only three Charset values are registered: `0000` Complete EBU Latin, `0110` ISO/IEC 10646 using **UTF-16** big endian (BMP only, "an extension of UCS-2"), `1111` UTF-8. All other values are reserved.
+- The fork's invented Thai charset ID `0x0E` is not registered (reserved). Not for upstream.
+- Wrong earlier: upstream's enum also lists IDs 1, 2, 3 (`EBU_LATIN_CY_GR`, `EBU_LATIN_AR_HE_CY_GR`, `ISO_LATIN_ALPHABET_2`). They are not registered in V2.5.1. ID 6 is now named UTF-16 BE (upstream still calls it UCS-2 BE; same for BMP characters).
+- Wrong earlier: "no Thai-specific table". Annex E.4 defines a **Thai regional profile**: glyph set is Complete EBU Latin plus U+0E00 to U+0E7F, sent as UTF-8 or UTF-16 dynamic labels (FIG type 2 / dynamic label charset). Thai text is therefore valid DLS; the fork's own UTF-8-to-"DAB Thai" mapping is not needed or defined by the standard.
+- E.4.2.2: Thai labels "shall have the combining flag set to 1" (except the rare labels needing no glyph combination), the base direction and bidi flags are 0, and the contextual flag is 1 only for labels using contextual characters. UTF-16 is recommended for predominantly Thai text.
+- E.2: the transmission system should pick the most efficient Charset per dynamic label (EBU Latin when every code point is in the repertoire, otherwise UTF-8/UTF-16).
+
+Verified in code:
+- `dls.cpp:330` writes the low nibble of the second DLS prefix byte as 0, so the text control field (where the combining flag lives) is always 0. Thai labels sent by odr-padenc therefore do not meet the Thai profile.
+- Default options convert to EBU Latin and silently replace every non-Latin character with a space (`charset.cpp:104`): `สวัสดี DAB` becomes spaces plus `DAB`.
+
+Not confirmed:
+- The bit positions of the text control field inside the DLS segment prefix are defined in ETSI EN 300 401, which is not in this PDF. A web summary lists the flags as Bidi, Base direction, Contextual, Combining (most to least significant), consistent with the profile table (ABU FIG 2 base direction RTL = `0100b`, Thai `00xxb`), but this is not a primary source. Do not implement before reading EN 300 401 (clause on dynamic label segment prefix / FIG type 2 text control).
+- ETSI and mpb.li are blocked from the container; the user must supply EN 300 401.
+
+Consequences for the patches:
+- `next-charset-warning` stays valid (the silent replacement is a defect). Its text and README only say UTF-8 / `--charset=15 --raw-dls`, which matches Table 1.
+- New candidate 4, `next-dls-text-control` (needs EN 300 401 first): let the user set the text control flags (combining/contextual) for raw DLS, or set the combining flag automatically for Thai code points, so raw UTF-8/UTF-16 Thai DLS meets Annex E.4.2.2.
+- Optional candidate 5: choose Charset automatically per label (E.2).
 
 ## The three patches
 Each branch is cut from `next` (patch 3 from patch 2).
