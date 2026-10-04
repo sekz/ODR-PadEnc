@@ -38,8 +38,13 @@ class CharsetConverter
         /*! Convert a UTF-8 encoded text line into an EBU Latin encoded byte
          *  stream. If up_to_first_error is set, convert as much text as possible.
          *  If false, raise an utf8::exception in case of conversion errors.
+         *
+         *  Characters that are not part of the EBU Latin table are replaced by a
+         *  space. If unconvertible is not null, the code points of these
+         *  characters are appended to it.
          */
-        std::string convert(std::string line_utf8, bool up_to_first_error = true);
+        std::string convert(std::string line_utf8, bool up_to_first_error = true,
+                std::vector<uint32_t>* unconvertible = nullptr);
 
         /*! Convert a EBU Latin byte stream to a UTF-8 encoded string.
          *  Invalid input characters are converted to ⁇ (unicode U+2047).

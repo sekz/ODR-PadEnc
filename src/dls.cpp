@@ -208,7 +208,16 @@ bool DLSEncoder::parseLabel(const std::string& dls_file, const DL_PARAMS& dl_par
             parse_dl_params(dls_fstream, dl_state);
         } else {
             if (not dl_params.raw_dls && dl_params.charset == DABCharset::UTF8) {
-                dls_lines.push_back(charset_converter.convert(line));
+                std::vector<uint32_t> unconvertible;
+                dls_lines.push_back(charset_converter.convert(line, true, &unconvertible));
+                if (not unconvertible.empty() and line != last_unconvertible_line) {
+                    last_unconvertible_line = line;
+                    fprintf(stderr, "ODR-PadEnc Warning: %zu character(s) in the DLS text cannot be "
+                            "represented in the Complete EBU Latin based repertoire and were replaced "
+                            "by spaces (first: U+%04X). To transmit other scripts, provide UTF-8 text "
+                            "and use --charset=15 --raw-dls.\n",
+                            unconvertible.size(), (unsigned) unconvertible.front());
+                }
             }
             else {
                 dls_lines.push_back(line);

@@ -73,7 +73,8 @@ CharsetConverter::CharsetConverter()
     }
 }
 
-std::string CharsetConverter::convert(std::string line_utf8, bool up_to_first_error)
+std::string CharsetConverter::convert(std::string line_utf8, bool up_to_first_error,
+        vector<uint32_t>* unconvertible)
 {
     string::iterator end_it;
 
@@ -102,6 +103,9 @@ std::string CharsetConverter::convert(std::string line_utf8, bool up_to_first_er
         }
         else {
             encoded_line[i] = ' ';
+            if (unconvertible) {
+                unconvertible->push_back(utf32line[i]);
+            }
         }
     }
     return encoded_line;

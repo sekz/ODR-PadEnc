@@ -139,6 +139,12 @@ When `odr-padenc` is launched with the default character set options, it assumes
 that the DLS text in the file is encoded in UTF-8, and will convert it according to
 the DAB standard to the *Complete EBU Latin based repertoire* character set encoding.
 
+Characters that are not part of the *Complete EBU Latin based repertoire* (for
+example Thai, Arabic or CJK text) cannot be converted. They are replaced by a
+space, and a warning is printed. To transmit such text, provide it as UTF-8 and
+use `--charset=15 --raw-dls`, which sends it as ISO/IEC 10646 using UTF-8. Note
+that not all receivers can display this character set.
+
 If you set the character set encoding to any other setting (except
 *Complete EBU Latin based repertoire* which needs no conversion),
 `odr-padenc` will abort, as it does not support any other conversion than from

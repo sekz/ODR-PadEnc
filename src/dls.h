@@ -146,6 +146,8 @@ private:
 
     PADPacketizer* pad_packetizer;
     CharsetConverter charset_converter;
+    // DLS line for which the unconvertible characters warning was last printed
+    std::string last_unconvertible_line;
     bool dls_toggle;
     DL_STATE dl_state_prev;
 
