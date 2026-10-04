@@ -29,6 +29,9 @@
 
 #include "odr-padenc.h"
 #include <memory>
+#include <cerrno>
+#include <climits>
+#include <cstdlib>
 
 std::atomic<bool> do_exit;
 
@@ -105,6 +108,22 @@ static void usage(const char* name) {
 }
 
 
+/*! Parse the integer argument of a command line option. Exits with an error
+ *  message if the argument is not a plain decimal number within [min_value, max_value].
+ */
+static int parse_int_option(const char* option_name, const char* arg, long min_value, long max_value)
+{
+    char* end = nullptr;
+    errno = 0;
+    const long value = strtol(arg, &end, 10);
+    if (arg[0] == '\0' or *end != '\0' or errno == ERANGE or value < min_value or value > max_value) {
+        fprintf(stderr, "ODR-PadEnc Error: invalid value '%s' for option %s (expected an integer from %ld to %ld)\n",
+                arg, option_name, min_value, max_value);
+        exit(2);
+    }
+    return (int)value;
+}
+
 static std::string list_dls_files(std::vector<std::string> dls_files) {
     std::string result = "";
     for (const std::string& dls_file : dls_files) {
@@ -160,7 +179,7 @@ int main(int argc, char *argv[]) {
     while((ch = getopt_long(argc, argv, "eChRrc:d:o:s:t:I:l:L:X:vm:", longopts, NULL)) != -1) {
         switch (ch) {
             case 'c':
-                options.dl_params.charset = (DABCharset) atoi(optarg);
+                options.dl_params.charset = (DABCharset) parse_int_option("--charset", optarg, 0, 15);
                 break;
             case 'C':
                 options.dl_params.raw_dls = true;
@@ -178,7 +197,7 @@ int main(int argc, char *argv[]) {
                 options.socket_ident = optarg;
                 break;
             case 's':
-                options.slide_interval = atoi(optarg);
+                options.slide_interval = parse_int_option("--sleep", optarg, 0, INT_MAX);
                 break;
             case 't':   // can be used more than once!
                 options.dls_files.push_back(optarg);
@@ -187,19 +206,19 @@ int main(int argc, char *argv[]) {
                 options.item_state_file = optarg;
                 break;
             case 'm':
-                options.max_slide_size = atoi(optarg);
+                options.max_slide_size = parse_int_option("--max-slide-size", optarg, 1, INT_MAX);
                 break;
             case 'R':
                 options.raw_slides = true;
                 break;
             case 'l':
-                options.label_interval = atoi(optarg);
+                options.label_interval = parse_int_option("--label", optarg, 0, INT_MAX);
                 break;
             case 'L':
-                options.label_insertion = atoi(optarg);
+                options.label_insertion = parse_int_option("--label-ins", optarg, 0, INT_MAX);
                 break;
             case 'X':
-                options.xpad_interval = atoi(optarg);
+                options.xpad_interval = parse_int_option("--xpad-interval", optarg, 1, INT_MAX);
                 break;
             case 'v':
                 verbose++;
