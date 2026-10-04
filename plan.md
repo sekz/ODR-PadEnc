@@ -13,7 +13,7 @@ Fork: `sekz/ODR-PadEnc` (origin). Mainstream: `Opendigitalradio/ODR-PadEnc` (ups
 - [x] `next` = `upstream/next`, pushed to origin.
 - [x] Value assessment done: the eight fork feature groups are not suitable for mainstream as-is (not wired into the autotools build, stubs, or application-level scope). See "Assessment".
 - [x] Thai charset claims checked (see "Thai findings").
-- [ ] Patches below.
+- [x] Patches below implemented, built and tested (see Results). Nothing submitted upstream.
 
 ## Assessment of the eight original groups
 - Core code differs from `upstream/master` by one `.gitignore` line: no core fixes exist.
@@ -33,29 +33,29 @@ Fork: `sekz/ODR-PadEnc` (origin). Mainstream: `Opendigitalradio/ODR-PadEnc` (ups
 Each branch is cut from `next` (patch 3 from patch 2).
 
 ### 1. `next-input-validation`
-- [ ] `-o` socket path: error out if the path does not fit in `sun_path` instead of silently truncating (the truncated path is then unlinked and bound).
-- [ ] Numeric options (`-c`, `-s`, `-m`, `-l`, `-L`, `-x`): reject non-numeric or out-of-range values instead of `atoi`; `-c` must be 0..15.
-- [ ] Build with autotools, no new warnings; manual checks of the failure cases.
+- [x] `-o` socket path: error out if the path does not fit in `sun_path` instead of silently truncating (the truncated path is then unlinked and bound).
+- [x] Numeric options (`-c`, `-s`, `-m`, `-l`, `-L`, `-x`): reject non-numeric or out-of-range values instead of `atoi`; `-c` must be 0..15.
+- [x] Build with autotools, no new warnings; manual checks of the failure cases.
 
 ### 2. `next-charset-warning`
-- [ ] Warn on stderr when a DLS line contains characters that cannot be represented in Complete EBU Latin (count and first offender), and point to `-c 15 -C` / `-c 6`.
-- [ ] README note: non-Latin scripts such as Thai need ISO/IEC 10646 (`-c 15 -C` or UCS-2).
-- [ ] No change to the encoded output.
+- [x] Warn on stderr when a DLS line contains characters that cannot be represented in Complete EBU Latin (count and first offender), and point to `-c 15 -C` / `-c 6`.
+- [x] README note: non-Latin scripts such as Thai need ISO/IEC 10646 (`-c 15 -C` or UCS-2).
+- [x] No change to the encoded output.
 
 ### 3. `next-tests`
-- [ ] Minimal `make check` using plain asserts, no new dependencies: charset conversion (Latin, accents, unrepresentable character), CRC.
-- [ ] Based on patch 2 so the warning behavior is tested.
+- [x] Minimal `make check` using plain asserts, no new dependencies: charset conversion (Latin, accents, unrepresentable character), CRC.
+- [x] Based on patch 2 so the warning behavior is tested.
 
 ## Per-patch procedure
-- [ ] Cut the branch, implement, `./bootstrap && ./configure && make`, run the checks, commit with a plain message.
-- [ ] Record the result below.
+- [x] Cut the branch, implement, `./bootstrap && ./configure && make`, run the checks, commit with a plain message.
+- [x] Record the result below.
 
 ## Results
 | Branch | Build | Checks | Notes |
 |--------|-------|--------|-------|
-| next-input-validation | | | |
-| next-charset-warning | | | |
-| next-tests | | | |
+| next-input-validation (`17d2313`) | OK, no new warnings | Manual: `-c 99`, `-c abc`, `-c 3x`, `-s -1`, `-m 0`, `-X 0`, `-l ''` all exit 2 with a clear message; a 127-character `-o` path is refused instead of truncated; a normal `-o /tmp/ptest` still binds `/tmp/ptest.padenc` | Warnings in `dls.h` (uninitialised `content_type`/`start_marker`) already exist upstream |
+| next-charset-warning (`855f3df`) | OK, no new warnings | With a fake audio encoder: Thai file prints exactly 1 warning (first U+0E2A), Latin file 0, `-c 15 -C` 0. First version repeated the warning every ~1.2 s; fixed to once per distinct line | Raw UTF-8 path (`--charset=15 --raw-dls`) not verified on air; based on code reading of `dls.cpp`. README wording says so only as "not all receivers can display" |
+| next-tests (`a67f6f8`) | OK | `make check`: 2/2 pass (`test_charset`, `test_crc`); `make dist` includes `tests/` | Branch is stacked on next-charset-warning |
 
 ## Decision
 - [ ] The user reviews and chooses which patches to submit to `Opendigitalradio/ODR-PadEnc` `next`.
