@@ -36,13 +36,17 @@ Verified in code:
 - `dls.cpp:330` writes the low nibble of the second DLS prefix byte as 0, so the text control field (where the combining flag lives) is always 0. Thai labels sent by odr-padenc therefore do not meet the Thai profile.
 - Default options convert to EBU Latin and silently replace every non-Latin character with a space (`charset.cpp:104`): `สวัสดี DAB` becomes spaces plus `DAB`.
 
-Not confirmed:
-- The bit positions of the text control field inside the DLS segment prefix are defined in ETSI EN 300 401, which is not in this PDF. A web summary lists the flags as Bidi, Base direction, Contextual, Combining (most to least significant), consistent with the profile table (ABU FIG 2 base direction RTL = `0100b`, Thai `00xxb`), but this is not a primary source. Do not implement before reading EN 300 401 (clause on dynamic label segment prefix / FIG type 2 text control).
-- ETSI and mpb.li are blocked from the container; the user must supply EN 300 401.
+Checked in ETSI EN 300 401 V2.1.1 (2017-01) (Google Drive copy supplied by the user; read clause 5.2.2 labels and clause 7.4.5.2 dynamic label, found by searching the full text; I did not read the rest of the 228k-character text):
+- Clause 7.4.5.2: in the first dynamic label segment, "Field 2" is the 4-bit Charset; the following 4-bit field is "Rfa ... shall be set to zero until they are defined". There is **no text control field** in this edition (the words text control, combining, contextual, bidi, base direction do not appear anywhere in the document).
+- FIG type 2 (clause 5.2.2.3) in this edition only chooses between UTF-8 and UCS-2, with no flags.
+- So upstream's `dls.cpp:330` (low nibble written as 0) is correct for V2.1.1. The text control field, the combining flag required by the Thai profile, and the UTF-16 naming of charset `0110` all come from a later EN 300 401 edition, which TS 101 756 V2.5.1 refers to.
+- The bit positions are therefore still not confirmed from a primary source. A web summary lists Bidi, Base direction, Contextual, Combining (most to least significant), consistent with the TS 101 756 profile table, but is not authoritative.
+
+Decision: candidate 4 (`next-dls-text-control`) is on hold. It needs the later EN 300 401 edition (the one that defines the text control field) before any code is written; implementing the flags from V2.1.1 would be wrong (the bits are Rfa there) and from the summary would be a guess.
 
 Consequences for the patches:
 - `next-charset-warning` stays valid (the silent replacement is a defect). Its text and README only say UTF-8 / `--charset=15 --raw-dls`, which matches Table 1.
-- New candidate 4, `next-dls-text-control` (needs EN 300 401 first): let the user set the text control flags (combining/contextual) for raw DLS, or set the combining flag automatically for Thai code points, so raw UTF-8/UTF-16 Thai DLS meets Annex E.4.2.2.
+- Candidate 4, `next-dls-text-control` (ON HOLD, needs a later EN 300 401 edition, see above): let the user set the text control flags (combining/contextual) for raw DLS, or set the combining flag automatically for Thai code points, so raw UTF-8/UTF-16 Thai DLS meets Annex E.4.2.2.
 - Optional candidate 5: choose Charset automatically per label (E.2).
 
 ## The three patches
