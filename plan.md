@@ -41,13 +41,35 @@ Exhaustive search of ETSI EN 300 401 V2.1.1 (2017-01), full PDF downloaded from 
 - Clause 7.4.5.2: in the first dynamic label segment, "Field 2" is the 4-bit Charset; the following 4-bit field is "Rfa ... shall be set to zero until they are defined". There is **no text control field** in this edition (the words text control, combining, contextual, bidi, base direction do not appear anywhere in the document).
 - FIG type 2 (clause 5.2.2.3) in this edition only chooses between UTF-8 and UCS-2, with no flags.
 - So upstream's `dls.cpp:330` (low nibble written as 0) is correct for V2.1.1. The text control field, the combining flag required by the Thai profile, and the UTF-16 naming of charset `0110` all come from a later EN 300 401 edition, which TS 101 756 V2.5.1 refers to.
-- The bit positions are therefore still not confirmed from a primary source. A web summary lists Bidi, Base direction, Contextual, Combining (most to least significant), consistent with the TS 101 756 profile table, but is not authoritative.
+- Bit positions and transport are now confirmed from a primary source, see "Text control field: confirmed definition" below.
 
-Decision: candidate 4 (`next-dls-text-control`) is on hold. It needs the later EN 300 401 edition (the one that defines the text control field) before any code is written; implementing the flags from V2.1.1 would be wrong (the bits are Rfa there) and from the summary would be a guess.
+## Text control field: confirmed definition (ETSI TS 103 176 V2.4.1 (2020-08), clause 8.3; PDF fetched from the user's Google Drive, 123 pages, extracted with pdftotext)
+Source and date:
+- Defined in TS 103 176 (Rules of implementation, service information features), not in EN 300 401 V2.1.1. Clause 8.3.3 notes: "The next revision to ETSI EN 300 401 [1] will include these changes." So the field was introduced through TS 103 176 ahead of an EN revision.
+- TS 103 176 history: V1.1.1 Aug 2012, V1.1.2 Jul 2013, V1.2.1 May 2016, V2.1.1 Aug 2017, V2.2.1 Oct 2018, V2.3.1 Nov 2019, V2.4.1 Aug 2020. The V2.4.1 PDF does not say which version added clause 8.3. It is after EN 300 401 V2.1.1 (Jan 2017) and no later than V2.4.1; TS 103 176 V2.1.1 and TS 101 756 V2.2.1 were both published Aug 2017 (possible, unproven origin). A search listing shows V2.2.1 (Oct 2018) already carrying clause 8.5 (RTL), unverified.
+
+Function (8.3.1, 8.4): an indication of label complexity so a receiver can tell whether it has the rendering capability to present the label. A receiver reassembles the label, analyses the flags, and if it lacks a required capability the label cannot be presented and an alternative label strategy applies. Receivers for regions needing more than EBU Latin shall decode the field in FIG type 2 labels and in dynamic labels. Not carried for FIG type 1 (EBU Latin only).
+
+Encoding (8.3.2, figure 5), 4 bits:
+- b3 Bidi flag: 1 = label contains bidirectional text (numerals excluded).
+- b2 Base direction: 0 = LTR, 1 = RTL (always set to the desired direction).
+- b1 Contextual flag: 1 = contextual characters present (glyph depends on position or surrounding characters, e.g. Arabic forms).
+- b0 Combining flag: 1 = combining characters present (receiver must compose glyphs from parts; non-spacing or spacing marks).
+
+Transport in dynamic labels (8.3.3.2, figure 7):
+- The text control field replaces the 4-bit Rfa (Field 3, b3-b0 of the second prefix byte) only when C flag = 0 **and** First flag = 1, i.e. in the first segment of a message. Other segments keep Rfa = 0 (b7 Rfa, b6-b4 SegNum, b3-b0 Rfa).
+- FIG type 2 uses the Rfu bit to switch the layout; not relevant to a PAD encoder.
+- This matches the derivation from TS 101 756 Annex E (Arab States FIG 2 = `0100b`, Thai `00xxb`).
+
+Other points in clause 8 relevant to odr-padenc:
+- 8.3.1: use UTF-8 or UTF-16 (fewest bytes) for non-Latin scripts; charset `0110` is UTF-16 (BMP only). No more 8-bit character sets are envisioned.
+- 8.1: the formatting characters 0x0A, 0x0B and 0x1F formerly provided for the dynamic label "shall not be used" (reserved in Complete EBU Latin). `dls.cpp` joins multiple DLS lines with `\n` (0x0A). Separate compliance question, not part of any patch yet.
+
+Decision: candidate 4 (`next-dls-text-control`) is now fully specified and is no longer blocked on a source. It waits only for the user's choice (see below). With the field at 0 the output is identical to today and to V2.1.1 (bits stay Rfa = 0).
 
 Consequences for the patches:
 - `next-charset-warning` stays valid (the silent replacement is a defect). Its text and README only say UTF-8 / `--charset=15 --raw-dls`, which matches Table 1.
-- Candidate 4, `next-dls-text-control` (ON HOLD, needs a later EN 300 401 edition, see above): let the user set the text control flags (combining/contextual) for raw DLS, or set the combining flag automatically for Thai code points, so raw UTF-8/UTF-16 Thai DLS meets Annex E.4.2.2.
+- Candidate 4, `next-dls-text-control` (specified, awaiting the user's choice): let the user set the text control flags (combining/contextual) for raw DLS, or set the combining flag automatically for Thai code points, so raw UTF-8/UTF-16 Thai DLS meets Annex E.4.2.2.
 - Optional candidate 5: choose Charset automatically per label (E.2).
 
 ## The three patches
