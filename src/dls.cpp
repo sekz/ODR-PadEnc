@@ -31,7 +31,7 @@
 
 
 // --- DLSEncoder -----------------------------------------------------------------
-const size_t DLSEncoder::MAXDLS = 128; // chars
+const size_t DLSEncoder::MAXDLS = 128; // bytes
 const size_t DLSEncoder::DLS_SEG_LEN_PREFIX = 2;
 const size_t DLSEncoder::DLS_SEG_LEN_CHAR_MAX = 16;
 const std::string DLSEncoder::DL_PARAMS_OPEN  = "##### parameters { #####";
@@ -236,8 +236,23 @@ bool DLSEncoder::parseLabel(const std::string& dls_file, const DL_PARAMS& dl_par
 
     dl_state.dl_text = ss.str();
     if (dl_state.dl_text.size() > MAXDLS) {
-        fprintf(stderr, "ODR-PadEnc Warning: oversized DLS text (%zu chars) had to be shortened\n", dl_state.dl_text.size());
-        dl_state.dl_text.resize(MAXDLS);
+        // MAXDLS is a number of bytes. Do not cut a multi-byte character in half, as
+        // the receiver would get an invalid character at the end of the text.
+        size_t keep = MAXDLS;
+        if (dl_params.raw_dls and dl_params.charset == DABCharset::UTF8) {
+            // keep points to the first byte that is dropped. If this is a continuation
+            // byte, the character it belongs to starts before it and is dropped entirely.
+            while (keep > 0 and ((uint8_t) dl_state.dl_text[keep] & 0xC0) == 0x80) {
+                keep--;
+            }
+        }
+        else if (dl_params.raw_dls and dl_params.charset == DABCharset::UCS2_BE) {
+            keep -= keep % 2;
+        }
+
+        fprintf(stderr, "ODR-PadEnc Warning: oversized DLS text (%zu bytes) had to be shortened to %zu bytes\n",
+                dl_state.dl_text.size(), keep);
+        dl_state.dl_text.resize(keep);
     }
 
     return true;
