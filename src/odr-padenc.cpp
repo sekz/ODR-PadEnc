@@ -76,6 +76,12 @@ static void usage(const char* name) {
                     "                             ID =  6: ISO/IEC 10646 using UCS-2 BE\n"
                     "                             ID = 15: ISO/IEC 10646 using UTF-8\n"
                     "                             Default: 15\n"
+                    " --text-control=N          Value (0 to 15) of the text control field in the first segment of each DLS text,\n"
+                    "                             see ETSI TS 103 176 clause 8.3. Bit 3: bidi, bit 2: base direction (1 = RTL),\n"
+                    "                             bit 1: contextual characters, bit 0: combining characters.\n"
+                    "                             Thai text needs 1 (combining), see ETSI TS 101 756 annex E.4.2.2.\n"
+                    "                             Requires --raw-dls.\n"
+                    "                             Default: 0\n"
                     " -r, --remove-dls          Always insert a DLS Remove Label command when replacing a DLS text.\n"
                     " -C, --raw-dls             Do not convert DLS texts to Complete EBU Latin based repertoire\n"
                     "                             character set encoding.\n"
@@ -172,6 +178,7 @@ int main(int argc, char *argv[]) {
         {"verbose",         no_argument,        0, 'v'},
         {"dump-current-slide",   required_argument, 0, 1},
         {"dump-completed-slide", required_argument, 0, 2},
+        {"text-control",    required_argument,  0, 3},
         {0,0,0,0},
     };
 
@@ -228,6 +235,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 2: // dump-completed-slide
                 options.completed_slide_dump_name = optarg;
+                break;
+            case 3: // text-control
+                options.dl_params.text_control = (uint8_t) parse_int_option("--text-control", optarg, 0, 15);
                 break;
             case '?':
             case 'h':
@@ -288,6 +298,15 @@ int main(int argc, char *argv[]) {
 
     fprintf(stderr, "ODR-PadEnc using charset %s (%d)\n",
            user_charset, (int) options.dl_params.charset);
+
+    if (options.dl_params.text_control != 0) {
+        if (not options.dl_params.raw_dls) {
+            fprintf(stderr, "ODR-PadEnc Error: --text-control requires --raw-dls, "
+                    "as converted texts use the Complete EBU Latin based repertoire\n");
+            return 2;
+        }
+        fprintf(stderr, "ODR-PadEnc using text control field 0x%X\n", options.dl_params.text_control);
+    }
 
     if (not options.dl_params.raw_dls) {
         switch (options.dl_params.charset) {

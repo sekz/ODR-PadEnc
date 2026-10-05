@@ -296,7 +296,9 @@ void DLSEncoder::encodeLabel(const std::string& dls_file, const char* item_state
         dl_state_prev = dl_state;
     }
 
-    prepend_dl_dgs(dl_state, dl_params.raw_dls ? dl_params.charset : DABCharset::COMPLETE_EBU_LATIN);
+    prepend_dl_dgs(dl_state,
+            dl_params.raw_dls ? dl_params.charset : DABCharset::COMPLETE_EBU_LATIN,
+            dl_params.text_control);
     if (remove_label_dg)
         pad_packetizer->AddDG(remove_label_dg, true);
 }
@@ -308,7 +310,7 @@ int DLSEncoder::dls_count(const std::string& text) {
 }
 
 
-DATA_GROUP* DLSEncoder::dls_get(const std::string& text, DABCharset charset, int seg_index) {
+DATA_GROUP* DLSEncoder::dls_get(const std::string& text, DABCharset charset, uint8_t text_control, int seg_index) {
     bool first_seg = seg_index == 0;
     bool last_seg  = seg_index == dls_count(text) - 1;
 
@@ -326,8 +328,15 @@ DATA_GROUP* DLSEncoder::dls_get(const std::string& text, DABCharset charset, int
             (last_seg   ? (1 << 5) : 0) +
             (seg_text_len - 1);
 
-    // prefix: charset / seg index
-    seg_data[1] = (first_seg ? (uint8_t) charset : seg_index) << 4;
+    // prefix: charset and text control in the first segment, seg index in the others.
+    // The text control field is only defined for the first segment (ETSI TS 103 176
+    // clause 8.3.3.2), the Rfa bits of the other segments stay zero.
+    if (first_seg) {
+        seg_data[1] = ((uint8_t) charset << 4) | (text_control & 0x0F);
+    }
+    else {
+        seg_data[1] = seg_index << 4;
+    }
 
     // character field
     memcpy(&seg_data[DLS_SEG_LEN_PREFIX], seg_text_start, seg_text_len);
@@ -345,7 +354,7 @@ DATA_GROUP* DLSEncoder::dls_get(const std::string& text, DABCharset charset, int
 }
 
 
-void DLSEncoder::prepend_dl_dgs(const DL_STATE& dl_state, DABCharset charset) {
+void DLSEncoder::prepend_dl_dgs(const DL_STATE& dl_state, DABCharset charset, uint8_t text_control) {
     // process all DL segments
     int seg_count = dls_count(dl_state.dl_text);
     std::vector<DATA_GROUP*> segs;
@@ -353,7 +362,7 @@ void DLSEncoder::prepend_dl_dgs(const DL_STATE& dl_state, DABCharset charset) {
 #ifdef DEBUG
         fprintf(stderr, "Segment number %d\n", seg_index + 1);
 #endif
-        segs.push_back(dls_get(dl_state.dl_text, charset, seg_index));
+        segs.push_back(dls_get(dl_state.dl_text, charset, text_control, seg_index));
     }
 
     // if enabled, add DL Plus data group

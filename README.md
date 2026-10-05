@@ -149,6 +149,16 @@ case, it is your responsibility to ensure the encoding is valid.  For instance,
 if your data is already encoded in *Complete EBU Latin based repertoire*, you
 must specify both `--charset=0` and `--raw-dls`.
 
+Texts in some scripts need to tell the receiver what is needed to display them.
+The *text control field* of ETSI TS 103 176, clause 8.3, does this with four
+flags in the first segment of a DLS text: bit 3 bidirectional text, bit 2 base
+direction (1 = right-to-left), bit 1 contextual characters, bit 0 combining
+characters. Use `--text-control=N` (0 to 15) to set it. It requires `--raw-dls`,
+and the default is 0. For example, Thai text needs the combining flag
+(ETSI TS 101 756, annex E.4.2.2):
+
+    odr-padenc --charset=15 --raw-dls --text-control=1 -t dls.txt -o $IDENTIFIER
+
 ## Known Limitations
 
 Some receivers are unable to decode slides larger than some size, even within the allowed

@@ -53,8 +53,9 @@ struct DL_PARAMS {
     DABCharset charset;
     bool raw_dls;
     bool remove_dls;
+    uint8_t text_control;   //!< 4-bit text control field, see ETSI TS 103 176 clause 8.3
 
-    DL_PARAMS() : charset(DABCharset::UTF8), raw_dls(false), remove_dls(false) {}
+    DL_PARAMS() : charset(DABCharset::UTF8), raw_dls(false), remove_dls(false), text_control(0) {}
 };
 
 
@@ -141,8 +142,8 @@ private:
     bool parse_dl_param_int_dl_plus_tag(const std::string &key, const std::string &value, int &target);
     void parse_dl_params(std::ifstream &dls_fstream, DL_STATE &dl_state);
     int dls_count(const std::string& text);
-    DATA_GROUP* dls_get(const std::string& text, DABCharset charset, int seg_index);
-    void prepend_dl_dgs(const DL_STATE& dl_state, DABCharset charset);
+    DATA_GROUP* dls_get(const std::string& text, DABCharset charset, uint8_t text_control, int seg_index);
+    void prepend_dl_dgs(const DL_STATE& dl_state, DABCharset charset, uint8_t text_control);
 
     PADPacketizer* pad_packetizer;
     CharsetConverter charset_converter;
