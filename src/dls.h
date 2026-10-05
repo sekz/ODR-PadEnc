@@ -53,8 +53,9 @@ struct DL_PARAMS {
     DABCharset charset;
     bool raw_dls;
     bool remove_dls;
+    bool space_between_lines;   //!< join lines with a space instead of the preferred line break
 
-    DL_PARAMS() : charset(DABCharset::UTF8), raw_dls(false), remove_dls(false) {}
+    DL_PARAMS() : charset(DABCharset::UTF8), raw_dls(false), remove_dls(false), space_between_lines(false) {}
 };
 
 

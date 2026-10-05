@@ -73,6 +73,11 @@ static void usage(const char* name) {
                     "                             ID =  6: ISO/IEC 10646 using UCS-2 BE\n"
                     "                             ID = 15: ISO/IEC 10646 using UTF-8\n"
                     "                             Default: 15\n"
+                    " --line-break=MODE         How the lines of a DLS file are joined into one text.\n"
+                    "                             MODE = preferred: with the preferred line break code 0x0A (ETSI EN 300 401)\n"
+                    "                             MODE = space: with a space, for receivers that follow ETSI TS 103 176,\n"
+                    "                             where code 0x0A is reserved and not displayed.\n"
+                    "                             Default: preferred\n"
                     " -r, --remove-dls          Always insert a DLS Remove Label command when replacing a DLS text.\n"
                     " -C, --raw-dls             Do not convert DLS texts to Complete EBU Latin based repertoire\n"
                     "                             character set encoding.\n"
@@ -153,6 +158,7 @@ int main(int argc, char *argv[]) {
         {"verbose",         no_argument,        0, 'v'},
         {"dump-current-slide",   required_argument, 0, 1},
         {"dump-completed-slide", required_argument, 0, 2},
+        {"line-break",      required_argument,  0, 4},
         {0,0,0,0},
     };
 
@@ -209,6 +215,19 @@ int main(int argc, char *argv[]) {
                 break;
             case 2: // dump-completed-slide
                 options.completed_slide_dump_name = optarg;
+                break;
+            case 4: // line-break
+                if (strcmp(optarg, "preferred") == 0) {
+                    options.dl_params.space_between_lines = false;
+                }
+                else if (strcmp(optarg, "space") == 0) {
+                    options.dl_params.space_between_lines = true;
+                }
+                else {
+                    fprintf(stderr, "ODR-PadEnc Error: invalid value '%s' for option --line-break "
+                            "(expected preferred or space)\n", optarg);
+                    return 2;
+                }
                 break;
             case '?':
             case 'h':

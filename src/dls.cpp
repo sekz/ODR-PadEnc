@@ -220,10 +220,13 @@ bool DLSEncoder::parseLabel(const std::string& dls_file, const DL_PARAMS& dl_par
     std::stringstream ss;
     for (size_t i = 0; i < dls_lines.size(); i++) {
         if (i != 0) {
+            // Code 0x0A is the preferred line break of ETSI EN 300 401. It is reserved
+            // in the later versions of ETSI TS 101 756 and TS 103 176, where it is not displayed.
+            const char separator = dl_params.space_between_lines ? ' ' : '\n';
             if (dl_params.charset == DABCharset::UCS2_BE)
-                ss << '\0' << '\n';
+                ss << '\0' << separator;
             else
-                ss << '\n';
+                ss << separator;
         }
 
         // UCS-2 BE: if from file the first byte of \0\n remains, remove it

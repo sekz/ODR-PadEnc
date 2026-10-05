@@ -149,6 +149,12 @@ case, it is your responsibility to ensure the encoding is valid.  For instance,
 if your data is already encoded in *Complete EBU Latin based repertoire*, you
 must specify both `--charset=0` and `--raw-dls`.
 
+If the DLS file has several lines, they are joined into one text. By default,
+the lines are separated by the *preferred line break* code (0x0A) of ETSI
+EN 300 401. This code is reserved in the later versions of ETSI TS 101 756 and
+TS 103 176 and is not displayed by receivers that follow them, so the lines
+run together. Use `--line-break=space` to join the lines with a space instead.
+
 ## Known Limitations
 
 Some receivers are unable to decode slides larger than some size, even within the allowed
