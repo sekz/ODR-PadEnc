@@ -65,15 +65,15 @@ Other points in clause 8 relevant to odr-padenc:
 - 8.3.1: use UTF-8 or UTF-16 (fewest bytes) for non-Latin scripts; charset `0110` is UTF-16 (BMP only). No more 8-bit character sets are envisioned.
 - 8.1: the formatting characters 0x0A, 0x0B and 0x1F formerly provided for the dynamic label "shall not be used" (reserved in Complete EBU Latin). `dls.cpp` joins multiple DLS lines with `\n` (0x0A). Separate compliance question, not part of any patch yet.
 
-Decision: candidate 4 (`next-dls-text-control`) is now fully specified and is no longer blocked on a source. It waits only for the user's choice (see below). With the field at 0 the output is identical to today and to V2.1.1 (bits stay Rfa = 0).
+Decision (2026-10-05): the user chose **B1**, an explicit `--text-control=N` option. Implemented as patch 4, `next-dls-text-control` (`206562c`), see below. With the field at 0 the output is identical to today and to V2.1.1 (bits stay Rfa = 0).
 
 Consequences for the patches:
 - `next-charset-warning` stays valid (the silent replacement is a defect). Its text and README only say UTF-8 / `--charset=15 --raw-dls`, which matches Table 1.
-- Candidate 4, `next-dls-text-control` (specified, awaiting the user's choice): let the user set the text control flags (combining/contextual) for raw DLS, or set the combining flag automatically for Thai code points, so raw UTF-8/UTF-16 Thai DLS meets Annex E.4.2.2.
+- Patch 4, `next-dls-text-control` (done, option B1): the user sets the text control flags with `--text-control=N` for raw DLS, so Thai DLS can carry the combining flag required by Annex E.4.2.2. Automatic detection (B2) was not chosen.
 - Optional candidate 5: choose Charset automatically per label (E.2).
 
-## The three patches
-Each branch is cut from `next` (patch 3 from patch 2).
+## The patches
+Patches 1 and 2 are cut from `next`, patch 3 from patch 2, patch 4 from patch 1.
 
 ### 1. `next-input-validation`
 - [x] `-o` socket path: error out if the path does not fit in `sun_path` instead of silently truncating (the truncated path is then unlinked and bound).
@@ -89,6 +89,13 @@ Each branch is cut from `next` (patch 3 from patch 2).
 - [x] Minimal `make check` using plain asserts, no new dependencies: charset conversion (Latin, accents, unrepresentable character), CRC.
 - [x] Based on patch 2 so the warning behavior is tested.
 
+### 4. `next-dls-text-control` (option B1, chosen by the user)
+- [x] `--text-control=N` (0 to 15), default 0, written into the 4 low bits of the second prefix byte of the **first** dynamic label segment only (TS 103 176 8.3.3.2). Other segments keep Rfa = 0.
+- [x] Requires `--raw-dls`; without it the program exits with an error, because converted texts use Complete EBU Latin.
+- [x] Strict parsing through the same helper as patch 1, so this branch is stacked on `next-input-validation`.
+- [x] Usage text and README updated.
+- [ ] Not done: automatic detection of the flags from the text (option B2), no unit test (the segment code is private; checked end to end instead).
+
 ## Per-patch procedure
 - [x] Cut the branch, implement, `./bootstrap && ./configure && make`, run the checks, commit with a plain message.
 - [x] Record the result below.
@@ -99,6 +106,7 @@ Each branch is cut from `next` (patch 3 from patch 2).
 | next-input-validation (`17d2313`) | OK, no new warnings | Manual: `-c 99`, `-c abc`, `-c 3x`, `-s -1`, `-m 0`, `-X 0`, `-l ''` all exit 2 with a clear message; a 127-character `-o` path is refused instead of truncated; a normal `-o /tmp/ptest` still binds `/tmp/ptest.padenc` | Warnings in `dls.h` (uninitialised `content_type`/`start_marker`) already exist upstream |
 | next-charset-warning (`855f3df`) | OK, no new warnings | With a fake audio encoder: Thai file prints exactly 1 warning (first U+0E2A), Latin file 0, `-c 15 -C` 0. First version repeated the warning every ~1.2 s; fixed to once per distinct line | Raw UTF-8 path (`--charset=15 --raw-dls`) not verified on air; based on code reading of `dls.cpp`. README wording says so only as "not all receivers can display" |
 | next-tests (`a67f6f8`) | OK | `make check`: 2/2 pass (`test_charset`, `test_crc`); `make dist` includes `tests/` | Branch is stacked on next-charset-warning |
+| next-dls-text-control (`206562c`) | OK, no new warnings (2 existing `dls.h` warnings) | DEBUG build prints each segment. `-c 15 -C`: first segment byte `f0`, later segments `10`, `20`, `30`. With `--text-control=1`, `4`, `15`: first segment `f1`, `f4`, `ff`, later segments unchanged. Rejected with exit 2: `--text-control=1` without `--raw-dls`, `16`, `abc`, `-1` | Stacked on `next-input-validation`. README text sits next to the charset README note, so combining the branches may need a trivial merge. No unit test |
 
 ## Decision
-- [ ] The user reviews and chooses which patches to submit to `Opendigitalradio/ODR-PadEnc` `next`.
+- [ ] The user reviews and chooses which of the four patches to submit to `Opendigitalradio/ODR-PadEnc` `next`.
