@@ -9,7 +9,7 @@ Fork: `sekz/ODR-PadEnc` (origin). Mainstream: `Opendigitalradio/ODR-PadEnc` (ups
 - Fork-only work (Thai rendering, StreamDAB API, smart DLS, Docker tooling, enhanced MOT) stays in the fork's `master`.
 
 ## Status (2026-10-04)
-- [x] `master` = upstream v3.1.0 merged (`0d376e6`), pushed to origin.
+- [x] `master` = upstream v3.1.0 merged (`054ea65`), pushed to origin.
 - [x] `next` = `upstream/next`, pushed to origin.
 - [x] Value assessment done: the eight fork feature groups are not suitable for mainstream as-is (not wired into the autotools build, stubs, or application-level scope). See "Assessment".
 - [x] Thai charset claims checked (see "Thai findings").
@@ -67,7 +67,7 @@ Other points in clause 8 relevant to odr-padenc:
 - 8.3.1: use UTF-8 or UTF-16 (fewest bytes) for non-Latin scripts; charset `0110` is UTF-16 (BMP only). No more 8-bit character sets are envisioned.
 - 8.1: the formatting characters 0x0A, 0x0B and 0x1F formerly provided for the dynamic label "shall not be used" (reserved in Complete EBU Latin). `dls.cpp` joins multiple DLS lines with `\n` (0x0A). Separate compliance question, not part of any patch yet.
 
-Decision (2026-10-05): the user chose **B1**, an explicit `--text-control=N` option. Implemented as patch 4, `next-dls-text-control` (`206562c`), see below. With the field at 0 the output is identical to today and to V2.1.1 (bits stay Rfa = 0).
+Decision (2026-10-05): the user chose **B1**, an explicit `--text-control=N` option. Implemented as patch 4, `next-dls-text-control` (`7fe5b19`), see below. With the field at 0 the output is identical to today and to V2.1.1 (bits stay Rfa = 0).
 
 Consequences for the patches:
 - `next-charset-warning` stays valid (the silent replacement is a defect). Its text and README only say UTF-8 / `--charset=15 --raw-dls`, which matches Table 1.
@@ -122,14 +122,22 @@ Patches 1, 2, 5 and 6 are cut from `next`, patch 3 from patch 2, patch 4 from pa
 ## Results
 | Branch | Build | Checks | Notes |
 |--------|-------|--------|-------|
-| next-input-validation (`17d2313`) | OK, no new warnings | Manual: `-c 99`, `-c abc`, `-c 3x`, `-s -1`, `-m 0`, `-X 0`, `-l ''` all exit 2 with a clear message; a 127-character `-o` path is refused instead of truncated; a normal `-o /tmp/ptest` still binds `/tmp/ptest.padenc` | Warnings in `dls.h` (uninitialised `content_type`/`start_marker`) already exist upstream |
-| next-charset-warning (`855f3df`) | OK, no new warnings | With a fake audio encoder: Thai file prints exactly 1 warning (first U+0E2A), Latin file 0, `-c 15 -C` 0. First version repeated the warning every ~1.2 s; fixed to once per distinct line | Raw UTF-8 path (`--charset=15 --raw-dls`) not verified on air; based on code reading of `dls.cpp`. README wording says so only as "not all receivers can display" |
-| next-tests (`a67f6f8`) | OK | `make check`: 2/2 pass (`test_charset`, `test_crc`); `make dist` includes `tests/` | Branch is stacked on next-charset-warning |
-| next-dls-text-control (`206562c`) | OK, no new warnings (2 existing `dls.h` warnings) | DEBUG build prints each segment. `-c 15 -C`: first segment byte `f0`, later segments `10`, `20`, `30`. With `--text-control=1`, `4`, `15`: first segment `f1`, `f4`, `ff`, later segments unchanged. Rejected with exit 2: `--text-control=1` without `--raw-dls`, `16`, `abc`, `-1` | Stacked on `next-input-validation`. README text sits next to the charset README note, so combining the branches may need a trivial merge. No unit test |
-| next-dls-truncation (`419948c`) | OK, no new warnings | DEBUG build, segments decoded: 150-byte Thai text now 126 bytes valid UTF-8 (was 128, invalid); 500-byte Thai text 128 valid; raw ASCII 200 bytes stays 128; UTF-16BE 140 bytes becomes 128, valid; converted Latin 200 bytes stays 128; a 106-byte text is untouched and prints no warning | Independent of the other branches |
-| next-dls-line-break (`ce44389`) | OK, no new warnings | DEBUG build: default and `preferred` give `0a` between lines (unchanged); `space` gives `20`, also in raw UTF-8; UTF-16BE gives `00 0a` by default and `00 20` with `space`; `--line-break=tab` exits 2 | Independent. Its README text sits near the other README notes, so combining branches may need a small merge |
+| next-input-validation (`be30c66`) | OK, no new warnings | Manual: `-c 99`, `-c abc`, `-c 3x`, `-s -1`, `-m 0`, `-X 0`, `-l ''` all exit 2 with a clear message; a 127-character `-o` path is refused instead of truncated; a normal `-o /tmp/ptest` still binds `/tmp/ptest.padenc` | Warnings in `dls.h` (uninitialised `content_type`/`start_marker`) already exist upstream |
+| next-charset-warning (`9aff52d`) | OK, no new warnings | With a fake audio encoder: Thai file prints exactly 1 warning (first U+0E2A), Latin file 0, `-c 15 -C` 0. First version repeated the warning every ~1.2 s; fixed to once per distinct line | Raw UTF-8 path (`--charset=15 --raw-dls`) not verified on air; based on code reading of `dls.cpp`. README wording says so only as "not all receivers can display" |
+| next-tests (`f27a241`) | OK | `make check`: 2/2 pass (`test_charset`, `test_crc`); `make dist` includes `tests/` | Branch is stacked on next-charset-warning |
+| next-dls-text-control (`7fe5b19`) | OK, no new warnings (2 existing `dls.h` warnings) | DEBUG build prints each segment. `-c 15 -C`: first segment byte `f0`, later segments `10`, `20`, `30`. With `--text-control=1`, `4`, `15`: first segment `f1`, `f4`, `ff`, later segments unchanged. Rejected with exit 2: `--text-control=1` without `--raw-dls`, `16`, `abc`, `-1` | Stacked on `next-input-validation`. README text sits next to the charset README note, so combining the branches may need a trivial merge. No unit test |
+| next-dls-truncation (`34ced3d`) | OK, no new warnings | DEBUG build, segments decoded: 150-byte Thai text now 126 bytes valid UTF-8 (was 128, invalid); 500-byte Thai text 128 valid; raw ASCII 200 bytes stays 128; UTF-16BE 140 bytes becomes 128, valid; converted Latin 200 bytes stays 128; a 106-byte text is untouched and prints no warning | Independent of the other branches |
+| next-dls-line-break (`5a1f664`) | OK, no new warnings | DEBUG build: default and `preferred` give `0a` between lines (unchanged); `space` gives `20`, also in raw UTF-8; UTF-16BE gives `00 0a` by default and `00 20` with `space`; `--line-break=tab` exits 2 | Independent. Its README text sits near the other README notes, so combining branches may need a small merge |
 
 ## Decision
 - [x] 2026-10-05: the user approved submitting in the suggested order: `next-input-validation`, `next-dls-truncation`, `next-charset-warning` with `next-tests`, `next-dls-text-control`, then `next-dls-line-break` last. Stacking: `next-tests` sits on `next-charset-warning` and `next-dls-text-control` on `next-input-validation`, so those pairs go together or in order.
 - [ ] Open: where the PRs are opened. This session can only reach `sekz/ODR-PadEnc`, not `Opendigitalradio/ODR-PadEnc`.
 - [ ] (superseded) The user reviews and chooses which of the six patches to submit to `Opendigitalradio/ODR-PadEnc` `next`.
+
+## History rewrite (2026-10-06)
+- The user asked for all commits authored by `Claude <noreply@anthropic.com>` to be re-authored as `Seksan Poltree <seksan.poltree@gmail.com>`, with no "Generated with Claude Code", Co-Authored-By or session lines in commits or PR bodies.
+- Audit before: 18 fork-only commits had the Claude identity as author and committer. No commit message contained attribution lines. 4 older commits use another placeholder identity, `Developer <user@example.com>` (`b78e91f`, `013493a`, `44fed6d`, `1daeff8` before, unchanged and not part of the request).
+- Method: only the author and committer lines of the 18 commits were changed, parents re-pointed, and the old SSH signatures (made by the session key, invalid after any change) removed. All other commits are byte-identical, so the 63 upstream commits and `next` kept their hashes and the history still connects to `Opendigitalradio/ODR-PadEnc`. Every branch tree is identical to before. `git filter-branch` was tried first and rejected: it recreated all 63 upstream commits (it drops GitHub's signatures), which would have disconnected the history.
+- Result: 0 commits with a Claude or Anthropic identity or message on any branch. The rewritten commits are unsigned. Commit hashes in this plan were updated; the old ones no longer exist on the fork.
+- This repo now commits as the user and no longer signs with the session key (`commit.gpgsign=false`, local config).
+- Backup of everything before the rewrite: `pre-rewrite-all.bundle` (all branches and tags, 23.9 MB) in the session scratchpad.
