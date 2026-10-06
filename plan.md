@@ -9,7 +9,7 @@ Fork: `sekz/ODR-PadEnc` (origin). Mainstream: `Opendigitalradio/ODR-PadEnc` (ups
 - Fork-only work (Thai rendering, StreamDAB API, smart DLS, Docker tooling, enhanced MOT) stays in the fork's `master`.
 
 ## Status (2026-10-04)
-- [x] `master` = upstream v3.1.0 merged (`054ea65`), pushed to origin.
+- [x] `master` = upstream v3.1.0 merged (`bba0c3d`), pushed to origin.
 - [x] `next` = `upstream/next`, pushed to origin.
 - [x] Value assessment done: the eight fork feature groups are not suitable for mainstream as-is (not wired into the autotools build, stubs, or application-level scope). See "Assessment".
 - [x] Thai charset claims checked (see "Thai findings").
@@ -136,8 +136,9 @@ Patches 1, 2, 5 and 6 are cut from `next`, patch 3 from patch 2, patch 4 from pa
 
 ## History rewrite (2026-10-06)
 - The user asked for all commits authored by `Claude <noreply@anthropic.com>` to be re-authored as `Seksan Poltree <seksan.poltree@gmail.com>`, with no "Generated with Claude Code", Co-Authored-By or session lines in commits or PR bodies.
-- Audit before: 18 fork-only commits had the Claude identity as author and committer. No commit message contained attribution lines. 4 older commits use another placeholder identity, `Developer <user@example.com>` (`b78e91f`, `013493a`, `44fed6d`, `1daeff8` before, unchanged and not part of the request).
+- Audit before: 18 fork-only commits had the Claude identity as author and committer. No commit message contained attribution lines. 4 older commits (`b78e91f`, `013493a`, `44fed6d`, `1daeff8`) used the placeholder identity `Developer <user@example.com>`; the user asked for those to be changed too, which was done in a second pass the same day.
 - Method: only the author and committer lines of the 18 commits were changed, parents re-pointed, and the old SSH signatures (made by the session key, invalid after any change) removed. All other commits are byte-identical, so the 63 upstream commits and `next` kept their hashes and the history still connects to `Opendigitalradio/ODR-PadEnc`. Every branch tree is identical to before. `git filter-branch` was tried first and rejected: it recreated all 63 upstream commits (it drops GitHub's signatures), which would have disconnected the history.
-- Result: 0 commits with a Claude or Anthropic identity or message on any branch. The rewritten commits are unsigned. Commit hashes in this plan were updated; the old ones no longer exist on the fork.
+- Result: all 33 fork-only commits are authored and committed by `Seksan Poltree <seksan.poltree@gmail.com>`; 0 commits with a Claude or Anthropic identity or message, and none with the placeholder identity, on any branch. The rewritten commits are unsigned. Commit hashes in this plan were updated; the old ones no longer exist on the fork.
 - This repo now commits as the user and no longer signs with the session key (`commit.gpgsign=false`, local config).
 - Backup of everything before the rewrite: `pre-rewrite-all.bundle` (all branches and tags, 23.9 MB) in the session scratchpad.
+- Second pass (placeholder identity): 27 commits were re-created (the 4 plus their descendants on `master` and `claude/pensive-cerf-1ta08s`). The six patch branches are based on `next`, are not descendants, and kept their hashes. The 63 upstream commits and all branch contents are unchanged. Backup before the second pass: `pre-rewrite2-all.bundle` in the session scratchpad.
